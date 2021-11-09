@@ -15,12 +15,17 @@ SAMPLE_INTERVAL = 100000
 # Genesis timestamp
 GENESIS = datetime.datetime(2022, 1, 1)
 
-# Half-life (in periods)
-# ~352 months or ~29 years, times 5 minutes per layer
-PERIODS = math.floor(351.868 * 30 * 24 * 12)
+# Length of a layer
+LAYER_TIME = datetime.timedelta(minutes=5)
+
+# Half-life arithmetic
+# ~352 months or ~29.3 years, times 5 minutes per layer
+ONE_YEAR = datetime.timedelta(days=365.2425)
+HALF_LIFE = ONE_YEAR*29.32233
+HALF_LIFE_PERIODS = HALF_LIFE / LAYER_TIME
 
 # Decay per period
-LAMBDA = math.log(2)/PERIODS
+LAMBDA = math.log(2)/HALF_LIFE_PERIODS
 
 ## LOGIC
 
@@ -50,7 +55,7 @@ while True:
         last_full = curtime
 
     # Calculate end timestamp for this period
-    curtime += datetime.timedelta(minutes=5)
+    curtime += LAYER_TIME
 
     # Calculate theoretical total issuance at end of _next_ period
     tot_j = TOTAL * (1 - math.exp(-LAMBDA*(i+2)))
@@ -59,7 +64,7 @@ while True:
     new_j = math.floor(tot_j - tot)
 
     # Find point of last smidge issuance
-    # If last period issuance is zero, this is the final period
+    # If next period issuance is zero, this is the final period
     if new_j < 1:
         print('FINAL PERIOD ISSUANCE')
 
