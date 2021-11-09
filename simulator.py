@@ -1,14 +1,14 @@
 import datetime, math
 
-# Issuance cap
-# 2.4 bn + 18 decimal places, i.e., 2.4e27
-TOTAL = 2_400_000_000_000_000_000_000_000_000
+# Smidge per smesh
+NUM_DECIMALS = 9
+ONE_SMESH = 10**NUM_DECIMALS
 
-# Decimal places to remove when printing
-FMT_DECIMALS = 18
+# Issuance cap (2.4bn smesh)
+TOTAL = int(2.4e9*ONE_SMESH)
 
 # Print every n periods
-SAMPLE_INTERVAL = 1000
+SAMPLE_INTERVAL = 100000
 
 # Genesis timestamp
 GENESIS = datetime.datetime(2022, 1, 1)
@@ -20,27 +20,47 @@ PERIODS = math.floor(351.868 * 30 * 24 * 12)
 # Decay per period
 LAMBDA = math.log(2)/PERIODS
 
-print(f'Running for {PERIODS} periods from {GENESIS} with lambda {LAMBDA} per period')
-print('Following figures in thousands of Smesh:')
+print(f'Running from {GENESIS} with lambda {LAMBDA} per period')
 
 curtime = GENESIS
-tot = 0
 i = 0
-new = 1
+last_full = 0
 
-# Loop until issuance falls below 1
-while new >= 1:
+# Bootstrap
+tot = tot_j = TOTAL * (1 - math.exp(-LAMBDA))
+new_j = math.floor(tot_j)
+
+# Loop until issuance falls below 1 smidge
+while True:
+    # Copy leading values for this period from last
+    tot_i = tot_j
+    new_i = new_j
+
+    # Find point of last full smesh issuance
+    if last_full == 0 and new_i < ONE_SMESH:
+        last_full = curtime
+
+    # End of this period
     curtime += datetime.timedelta(minutes=5)
 
-    # Calculate theoretical total issuance this period
-    tot_i = TOTAL * (1 - math.exp(-LAMBDA*(i+1)))
+    # Calculate theoretical total issuance at end of next period
+    tot_j = TOTAL * (1 - math.exp(-LAMBDA*(i+2)))
 
-    # Now calculate actual (integer) new issuance
-    new = math.floor(tot_i - tot)
-    tot += new
+    # Now calculate actual (integer) new issuance for next period
+    new_j = math.floor(tot_j - tot)
 
-    if i % SAMPLE_INTERVAL == 0:
-        print(f'Period {i:10} (end {curtime}): {new/10**FMT_DECIMALS:8.18f} new '
-              f'{tot/10**FMT_DECIMALS:17,.18f} tot')
+    # Find point of last smidge issuance
+    # If last period issuance is zero, this is the final period
+    if new_j < 1 or i % SAMPLE_INTERVAL == 0:
+        print(f'Period {i:11,} (end {curtime}): {new_i:18,.0f} smidge new; '
+              f'{tot/ONE_SMESH:23,.9f} smesh tot')
 
+    if new_j < 1:
+        print('FINAL PERIOD ISSUANCE')
+        print(f'tot: {tot:23,.0f}, tot_j: {tot_j:23,.0f}, new_j: {new_j:23,.0f}')
+        print(f'Last full smesh issuance: {last_full}')
+        break
+
+    # End this period
+    tot += new_i
     i += 1
