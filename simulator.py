@@ -1,5 +1,7 @@
 import datetime, math
 
+## PARAMETERS
+
 # Smidge per smesh
 NUM_DECIMALS = 9
 ONE_SMESH = 10**NUM_DECIMALS
@@ -20,6 +22,8 @@ PERIODS = math.floor(351.868 * 30 * 24 * 12)
 # Decay per period
 LAMBDA = math.log(2)/PERIODS
 
+## LOGIC
+
 print(f'Running from {GENESIS} with lambda {LAMBDA} per period')
 
 curtime = GENESIS
@@ -27,7 +31,8 @@ i = 0
 last_full = 0
 
 # Bootstrap
-tot = tot_j = TOTAL * (1 - math.exp(-LAMBDA))
+tot = 0
+tot_j = TOTAL * (1 - math.exp(-LAMBDA))
 new_j = math.floor(tot_j)
 
 # Loop until issuance falls below 1 smidge
@@ -36,31 +41,35 @@ while True:
     tot_i = tot_j
     new_i = new_j
 
+    # Calculate total issuance as of the end of this period
+    old_tot = tot
+    tot += new_i
+
     # Find point of last full smesh issuance
     if last_full == 0 and new_i < ONE_SMESH:
         last_full = curtime
 
-    # End of this period
+    # Calculate end timestamp for this period
     curtime += datetime.timedelta(minutes=5)
 
-    # Calculate theoretical total issuance at end of next period
+    # Calculate theoretical total issuance at end of _next_ period
     tot_j = TOTAL * (1 - math.exp(-LAMBDA*(i+2)))
 
-    # Now calculate actual (integer) new issuance for next period
+    # Now calculate actual (integer) new issuance for _next_ period
     new_j = math.floor(tot_j - tot)
 
     # Find point of last smidge issuance
     # If last period issuance is zero, this is the final period
-    if new_j < 1 or i % SAMPLE_INTERVAL == 0:
-        print(f'Period {i:11,} (end {curtime}): {new_i:18,.0f} smidge new; '
-              f'{tot/ONE_SMESH:23,.9f} smesh tot')
-
     if new_j < 1:
         print('FINAL PERIOD ISSUANCE')
-        print(f'tot: {tot:23,.0f}, tot_j: {tot_j:23,.0f}, new_j: {new_j:23,.0f}')
+
+    if new_j < 1 or i % SAMPLE_INTERVAL == 0:
+        print(f'Period {i:11,} (end {curtime}): {new_i:16,.0f} smidge new; {tot:25,.0f} smidge tot')
+
+    if new_j < 1:
+        #print(f'tot: {tot:23,.0f}, old_tot: {old_tot:23,.0f}, tot_j: {tot_j:23,.0f}, new_j: {new_j}')
         print(f'Last full smesh issuance: {last_full}')
         break
 
     # End this period
-    tot += new_i
     i += 1
