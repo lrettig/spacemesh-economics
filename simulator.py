@@ -4,8 +4,11 @@ import datetime, math
 # 2.4 bn + 18 decimal places, i.e., 2.4e27
 TOTAL = 2_400_000_000_000_000_000_000_000_000
 
-# Decimal places to remove when printing (i.e., print thousands)
-FMT_DECIMALS = 21
+# Decimal places to remove when printing
+FMT_DECIMALS = 18
+
+# Print every n periods
+SAMPLE_INTERVAL = 1000
 
 # Genesis timestamp
 GENESIS = datetime.datetime(2022, 1, 1)
@@ -22,12 +25,22 @@ print('Following figures in thousands of Smesh:')
 
 curtime = GENESIS
 tot = 0
-for i in range(PERIODS):
-    curtime += datetime.timedelta(minutes=5)
-    # Calculate total issuance this period
-    tot_i = TOTAL * (1 - math.exp(-LAMBDA*(i+1)))
-    new = tot_i - tot
-    tot = tot_i
+i = 0
+new = 1
 
-    print(f'Period {i:10} (end {curtime}): {new/10**FMT_DECIMALS:10.3f} new '
-          f'{tot/10**FMT_DECIMALS:10.3f} tot')
+# Loop until issuance falls below 1
+while new >= 1:
+    curtime += datetime.timedelta(minutes=5)
+
+    # Calculate theoretical total issuance this period
+    tot_i = TOTAL * (1 - math.exp(-LAMBDA*(i+1)))
+
+    # Now calculate actual (integer) new issuance
+    new = math.floor(tot_i - tot)
+    tot += new
+
+    if i % SAMPLE_INTERVAL == 0:
+        print(f'Period {i:10} (end {curtime}): {new/10**FMT_DECIMALS:8.18f} new '
+              f'{tot/10**FMT_DECIMALS:17,.18f} tot')
+
+    i += 1
