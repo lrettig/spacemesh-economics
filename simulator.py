@@ -27,6 +27,16 @@ HALF_LIFE_PERIODS = HALF_LIFE / LAYER_TIME
 # Decay per period
 LAMBDA = math.log(2)/HALF_LIFE_PERIODS
 
+# Vault vesting
+VEST_TOTAL = int(120e6*ONE_SMESH)
+TOTAL_REWARDS = TOTAL-VEST_TOTAL
+VEST_START = ONE_YEAR
+VEST_END = 4 * ONE_YEAR
+VEST_START_PERIOD = VEST_START/LAYER_TIME
+VEST_END_PERIOD = VEST_END/LAYER_TIME
+VEST_PERIODS = VEST_END_PERIOD - VEST_START_PERIOD
+VEST_PER_PERIOD = VEST_TOTAL//VEST_PERIODS
+
 ## LOGIC
 
 print(f'Running from {GENESIS} with lambda {LAMBDA} per period')
@@ -36,8 +46,8 @@ i = 0
 last_full = 0
 
 # Bootstrap
-tot = 0
-tot_j = TOTAL * (1 - math.exp(-LAMBDA))
+tot = vested = 0
+tot_j = TOTAL_REWARDS * (1 - math.exp(-LAMBDA))
 new_j = math.floor(tot_j)
 
 # Loop until issuance falls below 1 smidge
@@ -50,6 +60,11 @@ while True:
     old_tot = tot
     tot += new_i
 
+    # Add vesting
+    vest_i = VEST_PER_PERIOD if i >= VEST_START_PERIOD and i <= VEST_END_PERIOD else 0
+    vested += vest_i
+    tot += vest_i
+
     # Find point of last full smesh issuance
     if last_full == 0 and new_i < ONE_SMESH:
         last_full = curtime
@@ -58,7 +73,7 @@ while True:
     curtime += LAYER_TIME
 
     # Calculate theoretical total issuance at end of _next_ period
-    tot_j = TOTAL * (1 - math.exp(-LAMBDA*(i+2)))
+    tot_j = TOTAL_REWARDS * (1 - math.exp(-LAMBDA*(i+2)))
 
     # Now calculate actual (integer) new issuance for _next_ period
     new_j = math.floor(tot_j - tot)
@@ -69,10 +84,10 @@ while True:
         print('FINAL PERIOD ISSUANCE')
 
     if new_j < 1 or i % SAMPLE_INTERVAL == 0:
-        print(f'Period {i:11,} (end {curtime}): {new_i:16,.0f} smidge new; {tot:25,.0f} smidge tot')
+        print(f'Period {i:11,} (end {curtime}): {new_i:16,.0f} new iss; {vest_i:16,.0f} new vest;'
+              f' {vested:24,.0f} vested; {tot:25,.0f} smidge tot')
 
     if new_j < 1:
-        #print(f'tot: {tot:23,.0f}, old_tot: {old_tot:23,.0f}, tot_j: {tot_j:23,.0f}, new_j: {new_j}')
         print(f'Last full smesh issuance: {last_full}')
         break
 
