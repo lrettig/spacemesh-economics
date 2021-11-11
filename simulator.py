@@ -32,8 +32,8 @@ VEST_TOTAL = int(120e6*ONE_SMESH)
 TOTAL_REWARDS = TOTAL-VEST_TOTAL
 VEST_START = ONE_YEAR
 VEST_END = 4 * ONE_YEAR
-VEST_START_PERIOD = VEST_START/LAYER_TIME
-VEST_END_PERIOD = VEST_END/LAYER_TIME
+VEST_START_PERIOD = math.floor(VEST_START/LAYER_TIME)
+VEST_END_PERIOD = math.floor(VEST_END/LAYER_TIME)
 VEST_PERIODS = VEST_END_PERIOD - VEST_START_PERIOD
 VEST_PER_PERIOD = VEST_TOTAL//VEST_PERIODS
 
@@ -61,7 +61,7 @@ while True:
     tot += new_i
 
     # Add vesting
-    vest_i = VEST_PER_PERIOD if i >= VEST_START_PERIOD and i <= VEST_END_PERIOD else 0
+    vest_i = VEST_PER_PERIOD if i >= VEST_START_PERIOD and i < VEST_END_PERIOD else 0
     vested += vest_i
     tot += vest_i
 
@@ -73,7 +73,7 @@ while True:
     curtime += LAYER_TIME
 
     # Calculate theoretical total issuance at end of _next_ period
-    tot_j = TOTAL_REWARDS * (1 - math.exp(-LAMBDA*(i+2)))
+    tot_j = vested + TOTAL_REWARDS * (1 - math.exp(-LAMBDA*(i+2)))
 
     # Now calculate actual (integer) new issuance for _next_ period
     new_j = math.floor(tot_j - tot)
@@ -85,7 +85,7 @@ while True:
 
     if new_j < 1 or i % SAMPLE_INTERVAL == 0:
         print(f'Period {i:11,} (end {curtime}): {new_i:16,.0f} new iss; {vest_i:16,.0f} new vest;'
-              f' {vested:24,.0f} vested; {tot:25,.0f} smidge tot')
+              f' {vested:24,.0f} vested; {tot:26,.0f} smidge tot')
 
     if new_j < 1:
         print(f'Last full smesh issuance: {last_full}')
